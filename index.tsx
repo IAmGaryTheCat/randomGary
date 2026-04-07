@@ -45,7 +45,8 @@ const settings = definePluginSettings({
             { label: "Gary API", value: "gary", default: true },
             { label: "Cat API", value: "catapi" },
             { label: "Minker API (attachment only)", value: "minker" },
-            { label: "Goober API", value: "goober" }
+            { label: "Goober API", value: "goober" },
+            { label: "Gully API", value: "gully" }
         ],
     },
 });
