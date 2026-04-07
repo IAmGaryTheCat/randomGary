@@ -45,7 +45,8 @@ const settings = definePluginSettings({
             { label: "Gary API", value: "gary", default: true },
             { label: "Cat API", value: "catapi" },
             { label: "Minker API (attachment only)", value: "minker" },
-            { label: "Goober API", value: "goober" }
+            { label: "Goober API", value: "goober" },
+            { label: "Gully API", value: "gully" }
         ],
     },
 });
@@ -153,7 +154,8 @@ function GaryModal({ rootProps }: { rootProps: ModalProps; }) {
         { value: "gary", label: "Gary API" },
         { value: "catapi", label: "Cat API" },
         { value: "minker", label: "Minker API (attachment only)" },
-        { value: "goober", label: "Goober API" }
+        { value: "goober", label: "Goober API" },
+        { value: "gully", label: "Gully API" }
     ];
     const currentValue = settings.use(["randomGaryImageSource"]).randomGaryImageSource;
     return (
@@ -243,6 +245,9 @@ export const GaryChatBarIcon: ChatBarButton = ({ isMainChat }) => {
             break;
         case "goober":
             buttonTooltip = "Click for Goober";
+        case "gully":
+            buttonTooltip = "Click for Gully";
+            break;
     }
 
     return (
@@ -298,6 +303,10 @@ export async function getUrl() {
             return catJson[0].url;
         case "minker":
             return "https://minky.materii.dev/";
+        case "gully":
+            const gullyResponse = await fetch("https://api.garythe.cat/gully");
+            const gullyJson = await gullyResponse.json();
+            return gullyJson.url;
         default:
             throw new Error("Invalid randomGaryImageSource value");
     }
