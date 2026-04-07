@@ -243,6 +243,9 @@ export const GaryChatBarIcon: ChatBarButton = ({ isMainChat }) => {
             break;
         case "goober":
             buttonTooltip = "Click for Goober";
+        case "gully":
+            buttonTooltip = "Click for Gully";
+            break;
     }
 
     return (
@@ -298,6 +301,10 @@ export async function getUrl() {
             return catJson[0].url;
         case "minker":
             return "https://minky.materii.dev/";
+        case "gully":
+            const gullyResponse = await fetch("https://api.garythe.cat/gully");
+            const gullyJson = await gullyResponse.json();
+            return gullyJson.url;
         default:
             throw new Error("Invalid randomGaryImageSource value");
     }
