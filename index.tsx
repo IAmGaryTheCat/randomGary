@@ -1,15 +1,15 @@
 import "./styles.css";
 
-import { addChatBarButton, ChatBarButton, removeChatBarButton } from "@api/ChatButtons";
+import { ChatBarButton } from "@api/ChatButtons";
 import { definePluginSettings } from "@api/Settings";
 import { classNameFactory } from "@utils/css";
-import { Margins } from "@utils/margins";
 import { classes } from "@utils/misc";
 import { IconComponent } from "@utils/types";
 import { ModalCloseButton, ModalContent, ModalHeader, ModalProps, ModalRoot, openModal } from "@utils/modal";
 import definePlugin, { OptionType, PluginNative } from "@utils/types";
+import { sendMessage } from "@utils/discord";
 import { findByPropsLazy, findLazy, findStoreLazy } from "@webpack";
-import { ChannelStore, Constants, FluxDispatcher, Forms, MessageActions, PermissionsBits, PermissionStore, RestAPI, SearchableSelect, SelectedChannelStore, showToast, SnowflakeUtils, Toasts, useState } from "@webpack/common";
+import { ChannelStore, FluxDispatcher, MessageActions, PermissionsBits, PermissionStore, SearchableSelect, SelectedChannelStore, showToast, Toasts, useState } from "@webpack/common";
 import { Heading } from "@components/Heading";
 
 const cl = classNameFactory("vc-gary-");
@@ -62,27 +62,14 @@ async function sendGaryLink(channelId: string, link: string) {
                 showToast("Missing required permissions to embed links", Toasts.Type.FAILURE);
                 return;
             }
-            RestAPI.post({
-                url: Constants.Endpoints.MESSAGES(channelId),
-                body: {
-                    channel_id: channelId,
-                    content: link,
-                    nonce: SnowflakeUtils.fromTimestamp(Date.now()),
-                    sticker_ids: [],
-                    type: 0,
-                    attachments: [],
-                    message_reference: reply ? MessageActions.getSendMessageOptionsForReply(reply)?.messageReference : null,
-                }
+
+
+            sendMessage(channelId, {
+                content: link
+            }, true, {
+                messageReference: reply ? MessageActions.getSendMessageOptionsForReply(reply)?.messageReference : null,
             });
 
-            const cooldownMs = channel.rateLimitPerUser * 1000;
-
-            FluxDispatcher.dispatch({
-                type: "SLOWMODE_SET_COOLDOWN",
-                channelId,
-                slowmodeType: 0,
-                cooldownMs
-            });
         }
     } catch (error) {
         console.error("Failed to send Gary link:", error);
@@ -113,30 +100,12 @@ async function uploadGaryImage(url: string, channelId: string) {
             }, channelId, false, 0);
 
             upload.on("complete", () => {
-                RestAPI.post({
-                    url: Constants.Endpoints.MESSAGES(channelId),
-                    body: {
-                        channel_id: channelId,
-                        content: "",
-                        nonce: SnowflakeUtils.fromTimestamp(Date.now()),
-                        sticker_ids: [],
-                        type: 0,
-                        attachments: [{
-                            id: "0",
-                            filename: upload.filename,
-                            uploaded_filename: upload.uploadedFilename
-                        }],
-                        message_reference: reply ? MessageActions.getSendMessageOptionsForReply(reply)?.messageReference : null,
-                    }
-                });
 
-                const cooldownMs = channel.rateLimitPerUser * 1000;
-
-                FluxDispatcher.dispatch({
-                    type: "SLOWMODE_SET_COOLDOWN",
-                    channelId,
-                    slowmodeType: 0,
-                    cooldownMs
+                sendMessage(channelId, {
+                    content: "",
+                }, true, {
+                    messageReference: reply ? MessageActions.getSendMessageOptionsForReply(reply)?.messageReference : null,
+                    attachmentsToUpload: [upload]
                 });
             });
 
