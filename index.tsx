@@ -244,6 +244,7 @@ export const GaryChatBarIcon: ChatBarButton = ({ isMainChat }) => {
             break;
         case "goober":
             buttonTooltip = "Click for Goober";
+            break;
         case "gully":
             buttonTooltip = "Click for Gully";
             break;
