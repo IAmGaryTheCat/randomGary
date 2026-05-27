@@ -8,13 +8,13 @@ import { IconComponent } from "@utils/types";
 import definePlugin, { OptionType, PluginNative } from "@utils/types";
 import { sendMessage } from "@utils/discord";
 import { findByPropsLazy, findLazy, findStoreLazy } from "@webpack";
-import { ChannelStore, FluxDispatcher, MessageActions, PermissionsBits, PermissionStore, SearchableSelect, SelectedChannelStore, Modal, openModal, showToast, Toasts, useState } from "@webpack/common";
+import { ChannelStore, FluxDispatcher, MessageActions, PendingReplyStore, PermissionsBits, PermissionStore, SearchableSelect, SelectedChannelStore, Modal, openModal, showToast, Toasts, useState } from "@webpack/common";
 import { Heading } from "@components/Heading";
 import type { RenderModalProps } from "@vencord/discord-types";
+import { EquicordDevs } from "@utils/constants";
 
 const cl = classNameFactory("vc-gary-");
 const CloudUpload = findLazy(m => m.prototype?.trackUploadFinished);
-const PendingReplyStore = findStoreLazy("PendingReplyStore");
 const { getSlowmodeCooldownGuess } = findByPropsLazy("getSlowmodeCooldownGuess");
 const Native = VencordNative.pluginHelpers.RandomGary as PluginNative<typeof import("./native")>;
 
@@ -31,13 +31,10 @@ export const GaryIcon: IconComponent = ({ height = 20, width = 20, className }) 
 };
 
 const settings = definePluginSettings({
-    randomGarySendMethod: {
-        description: "Choose the buttons behavior.",
-        type: OptionType.SELECT,
-        options: [
-            { label: "Left Click: Send as a link, Right Click: Send as an attachment", value: "link", default: true },
-            { label: "Left Click: Send as an attachment, Right Click: Send as a link", value: "attachment" }
-        ],
+    randomGaryInvertBehavior: {
+        description: "Invert click behavior: left click sends as attachment, right click sends as link.",
+        type: OptionType.BOOLEAN,
+        default: false,
     },
     randomGaryImageSource: {
         description: "Choose the source of the image",
@@ -51,6 +48,8 @@ const settings = definePluginSettings({
         ],
     },
 });
+
+const GARY_SETTINGS_KEYS = ["randomGaryImageSource"] as const;
 
 async function sendGaryLink(channelId: string, link: string) {
     const reply = PendingReplyStore.getPendingReply(channelId);
@@ -70,9 +69,10 @@ async function sendGaryLink(channelId: string, link: string) {
                 messageReference: reply ? MessageActions.getSendMessageOptionsForReply(reply)?.messageReference : null,
             });
 
+        } else {
+            showToast("You are on cooldown, please wait before sending another image.", Toasts.Type.FAILURE);
         }
     } catch (error) {
-        console.error("Failed to send Gary link:", error);
         showToast("Failed to send Gary image", Toasts.Type.FAILURE);
     }
 }
@@ -91,6 +91,7 @@ async function uploadGaryImage(url: string, channelId: string) {
 
             showToast("Uploading image, this may take a few seconds.", Toasts.Type.MESSAGE);
             const buffer = await Native.getImageBuffer(url);
+            if (!buffer) { showToast("Failed to fetch image", Toasts.Type.FAILURE); return; }
             const blob = new Blob([buffer], { type: "image/jpeg" });
             const file = new File([blob], "gary.jpg", { type: "image/jpeg" });
             const upload = new CloudUpload({
@@ -111,10 +112,11 @@ async function uploadGaryImage(url: string, channelId: string) {
 
             upload.on("error", () => showToast("Failed to upload Gary image", Toasts.Type.FAILURE));
             upload.upload();
+        } else {
+            showToast("You are on cooldown, please wait before sending another image.", Toasts.Type.FAILURE);
         }
     } catch (error) {
-        console.error("Failed to upload Gary image:", error);
-        MessageActions.sendMessage(channelId, { content: "Failed to upload Gary image :(" });
+        showToast("Failed to upload Gary image", Toasts.Type.FAILURE);
     }
 }
 
@@ -127,7 +129,7 @@ function GaryModal({ rootProps }: { rootProps: RenderModalProps; }) {
         { value: "goober", label: "Goober API" },
         { value: "gully", label: "Gully API" }
     ];
-    const currentValue = settings.use(["randomGaryImageSource"]).randomGaryImageSource;
+    const currentValue = settings.use(GARY_SETTINGS_KEYS).randomGaryImageSource;
 
     return (
         <Modal
@@ -149,7 +151,7 @@ function GaryModal({ rootProps }: { rootProps: RenderModalProps; }) {
         </Modal>
     );
 }
-//@ts-ignore
+// @ts-expect-error ChatBarButton type doesn't include all props provided by the framework
 export const GaryChatBarIcon: ChatBarButton = ({ isMainChat }) => {
     const [isAnimating, setIsAnimating] = useState(false);
     const currentChannelId = SelectedChannelStore.getChannelId();
@@ -165,7 +167,9 @@ export const GaryChatBarIcon: ChatBarButton = ({ isMainChat }) => {
 
         if (currentChannelId) {
             const link = await getUrl();
-            if (settings.store.randomGarySendMethod === "link" && settings.store.randomGaryImageSource !== "minker") {
+            const isMinker = settings.store.randomGaryImageSource === "minker";
+            const invert = !!settings.store.randomGaryInvertBehavior;
+            if (!invert && !isMinker) {
                 await sendGaryLink(currentChannelId, link);
             } else {
                 await uploadGaryImage(link, currentChannelId);
@@ -179,7 +183,9 @@ export const GaryChatBarIcon: ChatBarButton = ({ isMainChat }) => {
 
         if (currentChannelId) {
             const link = await getUrl();
-            if (settings.store.randomGarySendMethod === "attachment" && settings.store.randomGaryImageSource !== "minker") {
+            const isMinker = settings.store.randomGaryImageSource === "minker";
+            const invert = !!settings.store.randomGaryInvertBehavior;
+            if (invert && !isMinker) {
                 await sendGaryLink(currentChannelId, link);
             } else {
                 await uploadGaryImage(link, currentChannelId);
@@ -197,7 +203,7 @@ export const GaryChatBarIcon: ChatBarButton = ({ isMainChat }) => {
     if (!isMainChat) return null;
 
     let buttonTooltip;
-    switch (settings.use(["randomGaryImageSource"]).randomGaryImageSource) {
+    switch (settings.use(GARY_SETTINGS_KEYS).randomGaryImageSource) {
         case "gary":
             buttonTooltip = "Click for Gary";
             break;
@@ -234,7 +240,8 @@ export const GaryChatBarIcon: ChatBarButton = ({ isMainChat }) => {
 export default definePlugin({
     name: "RandomGary",
     description: "Adds a button to send a random Gary picture!",
-    authors: [{ name: "Zach Orange", id: 683550738198036516n }],
+    authors: [{ id: 435847641041993759n, name: "Zach" }],
+    tags: ["Fun", "Media"],
     settings,
     start() {
         VencordNative.csp.requestAddOverride("https://api.garythe.cat", ["img-src", "connect-src"], "RandomGary");
@@ -276,5 +283,3 @@ export async function getUrl() {
             throw new Error("Invalid randomGaryImageSource value");
     }
 }
-
-
