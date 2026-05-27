@@ -1,4 +1,4 @@
-const allowedDomains = ["api.garythe.cat", "minky.materii.dev", "api.thecatapi.com"];
+const allowedDomains = ["api.garythe.cat", "cdn.garythe.cat", "minky.materii.dev", "api.thecatapi.com"];
 
 export async function getImageBuffer(_, url: string): Promise<Buffer | null> {
     try {
