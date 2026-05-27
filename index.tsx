@@ -5,12 +5,12 @@ import { definePluginSettings } from "@api/Settings";
 import { classNameFactory } from "@utils/css";
 import { classes } from "@utils/misc";
 import { IconComponent } from "@utils/types";
-import { ModalCloseButton, ModalContent, ModalHeader, ModalProps, ModalRoot, openModal } from "@utils/modal";
 import definePlugin, { OptionType, PluginNative } from "@utils/types";
 import { sendMessage } from "@utils/discord";
 import { findByPropsLazy, findLazy, findStoreLazy } from "@webpack";
-import { ChannelStore, FluxDispatcher, MessageActions, PermissionsBits, PermissionStore, SearchableSelect, SelectedChannelStore, showToast, Toasts, useState } from "@webpack/common";
+import { ChannelStore, FluxDispatcher, MessageActions, PermissionsBits, PermissionStore, SearchableSelect, SelectedChannelStore, Modal, openModal, showToast, Toasts, useState } from "@webpack/common";
 import { Heading } from "@components/Heading";
+import type { RenderModalProps } from "@vencord/discord-types";
 
 const cl = classNameFactory("vc-gary-");
 const CloudUpload = findLazy(m => m.prototype?.trackUploadFinished);
@@ -119,7 +119,7 @@ async function uploadGaryImage(url: string, channelId: string) {
 }
 
 
-function GaryModal({ rootProps }: { rootProps: ModalProps; }) {
+function GaryModal({ rootProps }: { rootProps: RenderModalProps; }) {
     const options = [
         { value: "gary", label: "Gary API" },
         { value: "catapi", label: "Cat API" },
@@ -128,29 +128,25 @@ function GaryModal({ rootProps }: { rootProps: ModalProps; }) {
         { value: "gully", label: "Gully API" }
     ];
     const currentValue = settings.use(["randomGaryImageSource"]).randomGaryImageSource;
-    return (
-        <ModalRoot {...rootProps}>
-            <ModalHeader className={cl("modal-header")}>
-                <Heading tag="h2">
-                    Button Settings
-                </Heading>
-                <ModalCloseButton onClick={rootProps.onClose} />
-            </ModalHeader>
-            <ModalContent className={cl("modal-content")}>
-                <Heading tag="h3">
-                    {"Image Source"}
-                </Heading>
 
-                <SearchableSelect
-                    options={options}
-                    value={options.find(o => o.value === currentValue)?.value}
-                    placeholder={"Select a source"}
-                    maxVisibleItems={5}
-                    closeOnSelect={true}
-                    onChange={v => settings.store.randomGaryImageSource = v}
-                />
-            </ModalContent>
-        </ModalRoot>
+    return (
+        <Modal
+            {...rootProps}
+            title="Button Settings"
+        >
+            <Heading tag="h3">
+                {"Image Source"}
+            </Heading>
+
+            <SearchableSelect
+                options={options}
+                value={options.find(o => o.value === currentValue)?.value}
+                placeholder={"Select a source"}
+                maxVisibleItems={5}
+                closeOnSelect={true}
+                onChange={v => settings.store.randomGaryImageSource = v}
+            />
+        </Modal>
     );
 }
 //@ts-ignore
