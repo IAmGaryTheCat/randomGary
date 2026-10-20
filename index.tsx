@@ -7,11 +7,10 @@ import { classes } from "@utils/misc";
 import { IconComponent } from "@utils/types";
 import definePlugin, { OptionType, PluginNative } from "@utils/types";
 import { sendMessage } from "@utils/discord";
-import { findByPropsLazy, findLazy, findStoreLazy } from "@webpack";
-import { ChannelStore, FluxDispatcher, MessageActions, PendingReplyStore, PermissionsBits, PermissionStore, SearchableSelect, SelectedChannelStore, Modal, openModal, showToast, Toasts, useState } from "@webpack/common";
+import { findByPropsLazy, findLazy } from "@webpack";
+import { ChannelStore, FluxDispatcher, MessageActions, PendingReplyStore, PermissionsBits, PermissionStore, SearchableSelect, SelectedChannelStore, Modal, openModal, showToast, useState } from "@webpack/common";
 import { Heading } from "@components/Heading";
 import type { RenderModalProps } from "@vencord/discord-types";
-import { EquicordDevs } from "@utils/constants";
 
 const cl = classNameFactory("vc-gary-");
 const CloudUpload = findLazy(m => m.prototype?.trackUploadFinished);
@@ -49,7 +48,7 @@ const settings = definePluginSettings({
     },
 });
 
-const GARY_SETTINGS_KEYS = ["randomGaryImageSource"] as const;
+const GARY_SETTINGS_KEYS: ("randomGaryImageSource")[] = ["randomGaryImageSource"];
 
 async function sendGaryLink(channelId: string, link: string) {
     const reply = PendingReplyStore.getPendingReply(channelId);
@@ -58,7 +57,7 @@ async function sendGaryLink(channelId: string, link: string) {
         if (getSlowmodeCooldownGuess(channelId) === 0) {
             const channel = ChannelStore.getChannel(channelId);
             if (channel.guild_id && !PermissionStore.can(PermissionsBits.EMBED_LINKS, channel)) {
-                showToast("Missing required permissions to embed links", Toasts.Type.FAILURE);
+                showToast({ text: "Missing required permissions to embed links", variant: "critical" });
                 return;
             }
 
@@ -70,10 +69,10 @@ async function sendGaryLink(channelId: string, link: string) {
             });
 
         } else {
-            showToast("You are on cooldown, please wait before sending another image.", Toasts.Type.FAILURE);
+            showToast({ text: "You are on cooldown, please wait before sending another image.", variant: "critical" });
         }
     } catch (error) {
-        showToast("Failed to send Gary image", Toasts.Type.FAILURE);
+        showToast({ text: "Failed to send Gary image", variant: "critical" });
     }
 }
 
@@ -85,14 +84,14 @@ async function uploadGaryImage(url: string, channelId: string) {
             const channel = ChannelStore.getChannel(channelId);
 
             if (channel.guild_id && !PermissionStore.can(PermissionsBits.ATTACH_FILES, channel)) {
-                showToast("Missing required permissions to upload files", Toasts.Type.FAILURE);
+                showToast({ text: "Missing required permissions to upload files", variant: "critical" });
                 return;
             }
 
-            showToast("Uploading image, this may take a few seconds.", Toasts.Type.MESSAGE);
+            showToast({ text: "Uploading image, this may take a few seconds." });
             const buffer = await Native.getImageBuffer(url);
-            if (!buffer) { showToast("Failed to fetch image", Toasts.Type.FAILURE); return; }
-            const blob = new Blob([buffer], { type: "image/jpeg" });
+            if (!buffer) { showToast({ text: "Failed to fetch image", variant: "critical" }); return; }
+            const blob = new Blob([new Uint8Array(buffer)], { type: "image/jpeg" });
             const file = new File([blob], "gary.jpg", { type: "image/jpeg" });
             const upload = new CloudUpload({
                 file,
@@ -110,13 +109,13 @@ async function uploadGaryImage(url: string, channelId: string) {
                 });
             });
 
-            upload.on("error", () => showToast("Failed to upload Gary image", Toasts.Type.FAILURE));
+            upload.on("error", () => showToast({ text: "Failed to upload Gary image", variant: "critical" }));
             upload.upload();
         } else {
-            showToast("You are on cooldown, please wait before sending another image.", Toasts.Type.FAILURE);
+            showToast({ text: "You are on cooldown, please wait before sending another image.", variant: "critical" });
         }
     } catch (error) {
-        showToast("Failed to upload Gary image", Toasts.Type.FAILURE);
+        showToast({ text: "Failed to upload Gary image", variant: "critical" });
     }
 }
 
@@ -202,7 +201,7 @@ export const GaryChatBarIcon: ChatBarButton = ({ isMainChat }) => {
 
     if (!isMainChat) return null;
 
-    let buttonTooltip;
+    let buttonTooltip = "";
     switch (settings.use(GARY_SETTINGS_KEYS).randomGaryImageSource) {
         case "gary":
             buttonTooltip = "Click for Gary";
